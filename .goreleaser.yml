@@ -1,0 +1,33 @@
+version: 2
+
+project_name: win-path-convert
+
+builds:
+  - id: win-path-convert
+    main: ./cmd/main.go
+    binary: win-path-convert
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: default
+    builds:
+      - win-path-convert
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-SHA256SUMS.txt"
+  algorithm: sha256
