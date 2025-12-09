@@ -1,4 +1,4 @@
-module win-path-convert
+module github.com/lyj404/win-path-convert
 
 go 1.25.1
 

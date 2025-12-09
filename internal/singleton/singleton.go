@@ -7,22 +7,22 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Mutex handle and name used to enforce single instance.
+// 用于强制单实例运行的互斥量句柄和名称
 var (
 	mutexHandle windows.Handle
 	mutexName   = "PathConvertToolMutex"
 	isSingle    = false
 )
 
-// SetMutexName allows overriding the mutex name before InitSingleton is called.
+// SetMutexName 允许在调用InitSingleton之前覆盖互斥量名称
 func SetMutexName(name string) {
 	if name != "" {
 		mutexName = name
 	}
 }
 
-// InitSingleton tries to create/open the named mutex.
-// Returns true if this instance owns the mutex (i.e., no other instance running).
+// InitSingleton 尝试创建/打开命名互斥量
+// 如果此实例拥有互斥量（即没有其他实例在运行），则返回true
 func InitSingleton() bool {
 	namePtr, err := syscall.UTF16PtrFromString(mutexName)
 	if err != nil {
@@ -44,7 +44,7 @@ func InitSingleton() bool {
 	return true
 }
 
-// ReleaseSingleton releases the mutex handle.
+// ReleaseSingleton 释放互斥量句柄
 func ReleaseSingleton() bool {
 	if !isSingle || mutexHandle == 0 {
 		return true
@@ -60,12 +60,12 @@ func ReleaseSingleton() bool {
 	return true
 }
 
-// IsSingleton reports whether this process acquired the mutex.
+// IsSingleton 报告此进程是否获取了互斥量
 func IsSingleton() bool {
 	return isSingle
 }
 
-// CheckSingleton attempts to open an existing mutex to detect running instances.
+// CheckSingleton 尝试打开现有的互斥量以检测正在运行的实例
 func CheckSingleton() (bool, error) {
 	namePtr, err := syscall.UTF16PtrFromString(mutexName)
 	if err != nil {
@@ -78,10 +78,10 @@ func CheckSingleton() (bool, error) {
 	}
 
 	if err != nil {
-		// Open failed, likely no mutex exists.
+		// 打开失败，可能没有互斥量存在
 		return true, nil
 	}
 
-	// Open succeeded, another instance is running.
+	// 打开成功，另一个实例正在运行
 	return false, nil
 }

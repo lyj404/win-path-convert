@@ -3,8 +3,8 @@ package pathconv
 import (
 	"testing"
 
-	"win-path-convert/internal/config"
-	"win-path-convert/internal/logger"
+	"github.com/lyj404/win-path-convert/internal/config"
+	"github.com/lyj404/win-path-convert/internal/logger"
 )
 
 func newTestConverter() *PathConverter {
