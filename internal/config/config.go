@@ -51,10 +51,11 @@ func DefaultConfig() *Config {
 		// 帮助用户理解程序的工作状态和转换结果
 		ShowNotifications: true,
 
-		// 默认排除所有URL，避免错误转换网络链接
-		// 这些模式不会被当作路径处理，防止破坏有用的URL
+		// 默认排除所有URL和特殊协议，避免错误转换网络链接和协议内容
+		// 这些模式不会被当作路径处理，防止破坏有用的URL和协议内容
 		ExcludePatterns: []string{
 			"http://*", "https://*", // 排除所有HTTP和HTTPS URL
+			"mailto:*", "ftp://*", "file://*", // 排除其他特殊协议
 		},
 
 		// 默认使用info日志级别，提供适当的信息量

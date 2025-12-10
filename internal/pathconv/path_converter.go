@@ -117,30 +117,13 @@ func (pc *PathConverter) ShouldConvert(text string) bool {
 
 // isExcluded 检查文本是否匹配任何排除模式
 // 该函数根据一系列规则判断文本是否应该被排除，不进行路径转换
-// 包括URL、特殊协议、环境变量和用户自定义模式
+// 包括环境变量和用户自定义模式（通过config配置的URL和特殊协议等）
 // 参数:
 //   - text: 要检查的文本
 //
 // 返回值:
 //   - bool: 如果文本匹配排除模式，返回true，否则返回false
 func (pc *PathConverter) isExcluded(text string) bool {
-	// 将文本转换为小写，用于不区分大小写的匹配
-	lowerText := strings.ToLower(text)
-
-	// 排除URL (http:// or https://)
-	if strings.HasPrefix(lowerText, "http://") || strings.HasPrefix(lowerText, "https://") {
-		pc.logger.Debug("排除URL: %s", text)
-		return true
-	}
-
-	// 排除其他特殊协议 (mailto:, ftp:, file:)
-	if strings.HasPrefix(lowerText, "mailto:") ||
-		strings.HasPrefix(lowerText, "ftp://") ||
-		strings.HasPrefix(lowerText, "file://") {
-		pc.logger.Debug("排除特殊协议: %s", text)
-		return true
-	}
-
 	// 检查是否匹配任何用户定义的排除模式
 	for _, regex := range pc.excludeRegexps {
 		if regex.MatchString(text) {
