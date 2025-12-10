@@ -62,50 +62,6 @@ func Log(level string, format string, args ...interface{}) {
 	}
 }
 
-// DebugLog 输出调试级别日志
-// 该函数用于输出详细的调试信息，仅在调试模式或排查问题时使用
-// 在生产环境中通常应关闭该级别的日志输出
-// 注意：这个函数主要作为便捷包装器存在，实际使用中推荐使用 GlobalLogger.Debug()
-// 参数:
-//   - format: 格式化字符串，类似于 fmt.Printf 的格式
-//   - args: 格式化参数，用于填充格式化字符串中的占位符
-func DebugLog(format string, args ...interface{}) {
-	GlobalLogger.Debug(format, args...)
-}
-
-// InfoLog 输出信息级别日志
-// 该函数用于输出常规信息，记录应用程序的正常运行状态和用户操作
-// 这是日常日志输出的主要级别，适合跟踪应用程序的基本行为
-// 注意：这个函数主要作为便捷包装器存在，实际使用中推荐使用 GlobalLogger.Info()
-// 参数:
-//   - format: 格式化字符串，类似于 fmt.Printf 的格式
-//   - args: 格式化参数，用于填充格式化字符串中的占位符
-func InfoLog(format string, args ...interface{}) {
-	GlobalLogger.Info(format, args...)
-}
-
-// WarnLog 输出警告级别日志
-// 该函数用于输出警告信息，表示可能的问题，但不会导致应用程序停止运行
-// 警告级别日志应引起注意，但通常不需要立即干预
-// 注意：这个函数主要作为便捷包装器存在，实际使用中推荐使用 GlobalLogger.Warn()
-// 参数:
-//   - format: 格式化字符串，类似于 fmt.Printf 的格式
-//   - args: 格式化参数，用于填充格式化字符串中的占位符
-func WarnLog(format string, args ...interface{}) {
-	GlobalLogger.Warn(format, args...)
-}
-
-// ErrorLog 输出错误级别日志
-// 该函数用于输出错误信息，表示发生了需要关注的问题
-// 错误级别日志通常表示功能失败，但应用程序可能会继续运行
-// 注意：这个函数主要作为便捷包装器存在，实际使用中推荐使用 GlobalLogger.Error()
-// 参数:
-//   - format: 格式化字符串，类似于 fmt.Printf 的格式
-//   - args: 格式化参数，用于填充格式化字符串中的占位符
-func ErrorLog(format string, args ...interface{}) {
-	GlobalLogger.Error(format, args...)
-}
-
 // ShortenText 缩短文本以便在日志中显示
 // 该函数将过长的文本截断为适当长度，防止日志输出变得过于冗长
 // 特别适用于显示路径或URL等可能很长的文本内容
