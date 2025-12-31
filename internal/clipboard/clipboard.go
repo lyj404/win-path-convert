@@ -36,6 +36,7 @@ func NewClipboardManager() *ClipboardManager {
 //   - error: 获取过程中可能发生的错误
 func (cm *ClipboardManager) GetText() (string, error) {
 	var lastErr error // 记录最后一次错误，用于返回
+	var clipboardOpened bool
 
 	// 使用退避策略重试，第一次立即尝试，然后等待15ms和30ms再尝试
 	// 这种策略可以减少因剪贴板被其他进程临时占用而导致的失败
@@ -50,53 +51,59 @@ func (cm *ClipboardManager) GetText() (string, error) {
 			lastErr = err
 			continue // 打开失败，尝试下一次重试
 		}
-		// 确保函数退出时关闭剪贴板，避免资源锁定
-		defer winapi.ProcCloseClipboard.Call()
-
-		// 获取剪贴板数据句柄，CF_UNICODE_TEXT表示Unicode文本格式
-		hData, _, _ := winapi.ProcGetClipboardData.Call(winapi.CFUnicodeText)
-		if hData == 0 {
-			return "", fmt.Errorf("剪贴板无文本内容")
-		}
-
-		// 获取数据块的大小（以字节为单位）
-		size, _, _ := winapi.ProcGlobalSize.Call(hData)
-		if size == 0 {
-			return "", fmt.Errorf("无法获取剪贴板数据大小")
-		}
-
-		// 锁定内存块，获取指向数据的指针
-		// GlobalLock返回一个指向内存块的指针，用于读取数据
-		ptr, _, _ := winapi.ProcGlobalLock.Call(hData)
-		if ptr == 0 {
-			return "", fmt.Errorf("无法锁定剪贴板内存")
-		}
-		// 确保函数退出时解锁内存块
-		defer winapi.ProcGlobalUnlock.Call(hData)
-
-		// 计算Unicode字符的数量（每个字符占2字节）
-		units := int(size / unsafe.Sizeof(uint16(0)))
-		if units == 0 {
-			return "", fmt.Errorf("剪贴板数据大小为零")
-		}
-
-		// 创建缓冲区，用于存储Unicode字符
-		buffer := make([]uint16, units)
-		// 将剪贴板数据复制到缓冲区
-		// RtlMoveMemory相当于C语言的memcpy函数，用于内存块复制
-		winapi.ProcRtlMoveMemory.Call(
-			uintptr(unsafe.Pointer(&buffer[0])),
-			ptr,
-			size,
-		)
-
-		// 将UTF-16编码的字符串转换为Go字符串
-		text := syscall.UTF16ToString(buffer)
-		return text, nil
+		// 剪贴板打开成功，标记状态并退出循环
+		clipboardOpened = true
+		break
 	}
 
-	// 所有尝试均失败，返回最后一次错误
-	return "", fmt.Errorf("无法打开剪贴板: %v", lastErr)
+	if !clipboardOpened {
+		// 所有尝试均失败，返回最后一次错误
+		return "", fmt.Errorf("无法打开剪贴板: %v", lastErr)
+	}
+
+	// 确保函数退出时关闭剪贴板，避免资源锁定
+	defer winapi.ProcCloseClipboard.Call()
+
+	// 获取剪贴板数据句柄，CF_UNICODE_TEXT表示Unicode文本格式
+	hData, _, _ := winapi.ProcGetClipboardData.Call(winapi.CFUnicodeText)
+	if hData == 0 {
+		return "", fmt.Errorf("剪贴板无文本内容")
+	}
+
+	// 获取数据块的大小（以字节为单位）
+	size, _, _ := winapi.ProcGlobalSize.Call(hData)
+	if size == 0 {
+		return "", fmt.Errorf("无法获取剪贴板数据大小")
+	}
+
+	// 锁定内存块，获取指向数据的指针
+	// GlobalLock返回一个指向内存块的指针，用于读取数据
+	ptr, _, _ := winapi.ProcGlobalLock.Call(hData)
+	if ptr == 0 {
+		return "", fmt.Errorf("无法锁定剪贴板内存")
+	}
+	// 确保函数退出时解锁内存块
+	defer winapi.ProcGlobalUnlock.Call(hData)
+
+	// 计算Unicode字符的数量（每个字符占2字节）
+	units := int(size / unsafe.Sizeof(uint16(0)))
+	if units == 0 {
+		return "", fmt.Errorf("剪贴板数据大小为零")
+	}
+
+	// 创建缓冲区，用于存储Unicode字符
+	buffer := make([]uint16, units)
+	// 将剪贴板数据复制到缓冲区
+	// RtlMoveMemory相当于C语言的memcpy函数，用于内存块复制
+	winapi.ProcRtlMoveMemory.Call(
+		uintptr(unsafe.Pointer(&buffer[0])),
+		ptr,
+		size,
+	)
+
+	// 将UTF-16编码的字符串转换为Go字符串
+	text := syscall.UTF16ToString(buffer)
+	return text, nil
 }
 
 // SetText 设置剪贴板文本内容，包含简单退避重试
@@ -109,6 +116,7 @@ func (cm *ClipboardManager) GetText() (string, error) {
 //   - error: 设置过程中可能发生的错误
 func (cm *ClipboardManager) SetText(text string) error {
 	var lastErr error // 记录最后一次错误，用于返回
+	var clipboardOpened bool
 
 	// 使用退避策略重试，与GetText相同的策略
 	for _, delay := range []time.Duration{0, 15 * time.Millisecond, 30 * time.Millisecond} {
@@ -121,58 +129,64 @@ func (cm *ClipboardManager) SetText(text string) error {
 			lastErr = err
 			continue // 打开失败，尝试下一次重试
 		}
-		// 确保函数退出时关闭剪贴板
-		defer winapi.ProcCloseClipboard.Call()
-
-		// 清空剪贴板，准备设置新内容
-		winapi.ProcEmptyClipboard.Call()
-
-		// 将Go字符串转换为UTF-16编码的字节切片
-		utf16Text, err := windows.UTF16FromString(text)
-		if err != nil {
-			return fmt.Errorf("无法转换文本为UTF16: %v", err)
-		}
-
-		// 计算数据长度（以字节为单位）
-		dataLen := uintptr(len(utf16Text) * int(unsafe.Sizeof(utf16Text[0])))
-		// 分配可移动的内存块，用于存储剪贴板数据
-		// GMEM_MOVEABLE表示内存块可以被移动和重新分配
-		hMem, _, _ := winapi.ProcGlobalAlloc.Call(winapi.GMEMMoveable, dataLen)
-		if hMem == 0 {
-			return fmt.Errorf("无法分配剪贴板内存")
-		}
-
-		// 锁定内存块，获取指向数据的指针
-		ptr, _, _ := winapi.ProcGlobalLock.Call(hMem)
-		if ptr == 0 {
-			// 锁定失败，释放已分配的内存
-			winapi.ProcGlobalFree.Call(hMem)
-			return fmt.Errorf("无法锁定剪贴板内存")
-		}
-
-		// 将UTF-16数据复制到分配的内存块中
-		winapi.ProcRtlMoveMemory.Call(
-			ptr,
-			uintptr(unsafe.Pointer(&utf16Text[0])),
-			dataLen,
-		)
-		// 解锁内存块，使其可以被剪贴板访问
-		winapi.ProcGlobalUnlock.Call(hMem)
-
-		// 设置剪贴板数据，数据句柄的所有权转移给剪贴板系统
-		ret, _, _ := winapi.ProcSetClipboardData.Call(winapi.CFUnicodeText, hMem)
-		if ret == 0 {
-			// 设置失败，释放内存块
-			winapi.ProcGlobalFree.Call(hMem)
-			return fmt.Errorf("无法设置剪贴板数据")
-		}
-
-		// 设置成功，返回nil
-		return nil
+		// 剪贴板打开成功，标记状态并退出循环
+		clipboardOpened = true
+		break
 	}
 
-	// 所有尝试均失败，返回最后一次错误
-	return fmt.Errorf("无法打开剪贴板: %v", lastErr)
+	if !clipboardOpened {
+		// 所有尝试均失败，返回最后一次错误
+		return fmt.Errorf("无法打开剪贴板: %v", lastErr)
+	}
+
+	// 确保函数退出时关闭剪贴板
+	defer winapi.ProcCloseClipboard.Call()
+
+	// 清空剪贴板，准备设置新内容
+	winapi.ProcEmptyClipboard.Call()
+
+	// 将Go字符串转换为UTF-16编码的字节切片
+	utf16Text, err := windows.UTF16FromString(text)
+	if err != nil {
+		return fmt.Errorf("无法转换文本为UTF16: %v", err)
+	}
+
+	// 计算数据长度（以字节为单位）
+	dataLen := uintptr(len(utf16Text) * int(unsafe.Sizeof(utf16Text[0])))
+	// 分配可移动的内存块，用于存储剪贴板数据
+	// GMEM_MOVEABLE表示内存块可以被移动和重新分配
+	hMem, _, _ := winapi.ProcGlobalAlloc.Call(winapi.GMEMMoveable, dataLen)
+	if hMem == 0 {
+		return fmt.Errorf("无法分配剪贴板内存")
+	}
+
+	// 锁定内存块，获取指向数据的指针
+	ptr, _, _ := winapi.ProcGlobalLock.Call(hMem)
+	if ptr == 0 {
+		// 锁定失败，释放已分配的内存
+		winapi.ProcGlobalFree.Call(hMem)
+		return fmt.Errorf("无法锁定剪贴板内存")
+	}
+
+	// 将UTF-16数据复制到分配的内存块中
+	winapi.ProcRtlMoveMemory.Call(
+		ptr,
+		uintptr(unsafe.Pointer(&utf16Text[0])),
+		dataLen,
+	)
+	// 解锁内存块，使其可以被剪贴板访问
+	winapi.ProcGlobalUnlock.Call(hMem)
+
+	// 设置剪贴板数据，数据句柄的所有权转移给剪贴板系统
+	ret, _, _ := winapi.ProcSetClipboardData.Call(winapi.CFUnicodeText, hMem)
+	if ret == 0 {
+		// 设置失败，释放内存块
+		winapi.ProcGlobalFree.Call(hMem)
+		return fmt.Errorf("无法设置剪贴板数据")
+	}
+
+	// 设置成功，返回nil
+	return nil
 }
 
 // HasChanged 检查剪贴板内容是否已变化
