@@ -93,7 +93,7 @@ func (a *PathConvertApp) Cleanup() {
 // 返回值:
 //   - error: 运行过程中可能发生的错误
 func (a *PathConvertApp) Run() error {
-	a.log.Info("应用程序已启动，按Ctrl+C退出程序")
+	a.log.Info("应用程序已启动，按Alt+Q退出程序")
 
 	// 平台检查，确保程序只在Windows系统上运行
 	if runtime.GOOS != "windows" {
@@ -161,7 +161,7 @@ func RunApplication() error {
 	appLogger.Info("日志级别: %s", cfg.LogLevel)
 	appLogger.Info("自动转换: %t", cfg.AutoConvert)
 	appLogger.Info("显示通知: %t", cfg.ShowNotifications)
-	appLogger.Info("按Ctrl+C或Ctrl+Break退出程序")
+	appLogger.Info("按ESC键退出程序")
 
 	// 运行应用程序主循环
 	if err := app.Run(); err != nil {

@@ -20,8 +20,6 @@ import (
 //   - error: 初始化或运行过程中可能发生的错误
 func (a *PathConvertApp) runWithClipboardListener() error {
 	a.log.Info("使用剪贴板监听模式")
-	// 获取当前线程ID，用于后面向特定线程发送退出消息
-	tid := getCurrentThreadID()
 
 	// 创建窗口类名称字符串（UTF-16编码，Windows API要求）
 	className, _ := syscall.UTF16PtrFromString("PathConvertClipboardListener")
@@ -69,16 +67,20 @@ func (a *PathConvertApp) runWithClipboardListener() error {
 	// 确保退出时取消注册剪贴板监听
 	defer winapi.ProcRemoveClipboardFormatListener.Call(hwnd)
 
-	// 启动一个goroutine监听退出信号，以便优雅地退出消息循环
-	// 当收到信号或上下文被取消时，向消息循环发送退出消息
-	go func(tid uint32) {
-		select {
-		case <-a.sigCh: // 收到操作系统退出信号（如Ctrl+C）
-			postQuitToThread(tid)
-		case <-a.ctx.Done(): // 上下文被取消（应用程序主动退出）
-			postQuitToThread(tid)
-		}
-	}(tid)
+	// 注册全局热键 Alt+Q (ID=1)
+	hotkeyId := 1
+	ret, _, err := winapi.ProcRegisterHotKey.Call(
+		hwnd,
+		uintptr(hotkeyId),
+		uintptr(winapi.MODAlt),
+		uintptr(VKQ),
+	)
+	if ret == 0 {
+		a.log.Warn("无法注册热键 Alt+Q: %v", err)
+	} else {
+		a.log.Info("热键 Alt+Q 已注册")
+	}
+	defer winapi.ProcUnregisterHotKey.Call(hwnd, uintptr(hotkeyId))
 
 	// 进入Windows消息循环，等待并处理各种系统消息
 	var m Msg // 消息结构体，用于接收消息
@@ -132,6 +134,11 @@ func (a *PathConvertApp) windowProc(hwnd uintptr, message uint32, wparam, lparam
 	switch message {
 	case WMDestroy:
 		// 收到窗口销毁消息，向消息循环发送退出消息
+		winapi.ProcPostQuitMessage.Call(0)
+		return 0
+	case winapi.WMHotKey:
+		// 收到热键消息
+		a.log.Info("收到热键消息，ID=%d", wparam)
 		winapi.ProcPostQuitMessage.Call(0)
 		return 0
 	}

@@ -11,6 +11,12 @@ const (
 	WMClipboardUpdate = winapi.WMClipboardUpdate // 剪贴板更新消息 (0x031D)
 	WMDestroy         = winapi.WMDestroy         // 窗口销毁消息 (0x0002)
 	WMQuit            = winapi.WMQuit            // 退出消息，用于结束消息循环 (0x0012)
+	WMKeyDown         = winapi.WMKeyDown         // 键盘按下消息
+	WMKeyUp           = winapi.WMKeyUp           // 键盘释放消息
+	VKEscape          = winapi.VKEscape          // ESC 键虚拟键码
+	WHKeyboardLow     = winapi.WHKeyboardLow     // 低级键盘钩子
+	VKMenu            = 0x12                     // Alt 键虚拟键码
+	VKQ               = 0x51                     // Q 键虚拟键码
 )
 
 // WndClassEx 窗口类结构体

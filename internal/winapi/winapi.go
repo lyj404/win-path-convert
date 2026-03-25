@@ -61,6 +61,16 @@ var (
 	// 系统模块与线程管理
 	ProcGetModuleHandleW   = Kernel32.NewProc("GetModuleHandleW")   // 获取模块句柄
 	ProcGetCurrentThreadId = Kernel32.NewProc("GetCurrentThreadId") // 获取当前线程ID
+
+	// 键盘钩子相关函数
+	ProcSetWindowsHookExW   = User32.NewProc("SetWindowsHookExW")   // 安装键盘钩子
+	ProcUnhookWindowsHookEx = User32.NewProc("UnhookWindowsHookEx") // 卸载键盘钩子
+	ProcCallNextHookEx      = User32.NewProc("CallNextHookEx")      // 传递给下一个钩子
+	ProcGetAsyncKeyState    = User32.NewProc("GetAsyncKeyState")    // 获取异步键状态
+
+	// 热键注册相关函数
+	ProcRegisterHotKey   = User32.NewProc("RegisterHotKey")   // 注册全局热键
+	ProcUnregisterHotKey = User32.NewProc("UnregisterHotKey") // 注销全局热键
 )
 
 // Windows系统常量定义
@@ -77,4 +87,16 @@ const (
 	WMClipboardUpdate = 0x031D // 剪贴板内容更新消息，当剪贴板内容变化时发送
 	WMDestroy         = 0x0002 // 窗口销毁消息，当窗口即将被销毁时发送
 	WMQuit            = 0x0012 // 退出消息，用于请求消息循环终止
+
+	// 键盘钩子常量
+	WHKeyboardLow = 13     // 低级键盘钩子钩子类型
+	WHKeyboard    = 13     // 键盘钩子钩子类型
+	WMKeyDown     = 0x0100 // 键盘按下消息
+	WMKeyUp       = 0x0101 // 键盘释放消息
+	WM_SYSKeyDown = 0x0104 // 系统键按下消息
+	VKEscape      = 0x1B   // ESC 键虚拟键码
+
+	// 热键常量
+	WMHotKey = 0x0312 // 热键消息，当注册的热键被按下时发送
+	MODAlt   = 0x0001 // Alt 键修饰符
 )
